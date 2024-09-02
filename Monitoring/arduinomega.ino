@@ -51,7 +51,7 @@ String datetime;                                // untuk tanggal
 String timeonly;                                // untuk waktu
 int thn, bln, tgl, jam, mnt, dtk;    
 
-String kirim, kondisi;
+String kirim;
 int pHrelaypin = 31, ECrelaypin = 29, pomparelay = 27, h;
 
 // State machine
@@ -70,8 +70,6 @@ State currentState = IDLE;    // posisi sekarang idle
 unsigned long lastTime = 0;
 unsigned long minutes = 0;
 unsigned long hours = 0;
-
-bool pesan_terkirim = false;
 
 #define countof(a) (sizeof(a) / sizeof(a[0]))
 void printDateTime(const RtcDateTime& dt) {
@@ -108,13 +106,11 @@ void setup() {
   Wire.begin();         
   Wire.setClock(10000);
 
-   // Inisialisasi LCD
+  // Inisialisasi LCD
   lcd.init();
-  lcd.begin(20,4);
   lcd.backlight();
 
   // inisialisasi sensor sensor
-  
   sensors.begin();                      // DS18B20
   ec.begin();                           // EC
   for (byte i = 0; i < 8; i++) {
@@ -178,6 +174,7 @@ void setup() {
 void loop() {
    switch (currentState) {
     case IDLE:
+      lcd.display();
       waktuku();
       displayLcd();
       
@@ -193,12 +190,12 @@ void loop() {
 
     case SAMPLING_SUHU:
       for (h=1; h <= 5; h++){
-        waktuku();
+        // waktuku();
         jarak();
         displayLcd();
       }
       for (h=1; h <= 20; h++){
-        waktuku();
+        // waktuku();
         relay(1,1,0);
         DSTEMP();
         displayLcd();
@@ -207,7 +204,7 @@ void loop() {
     break;
 
     case SAMPLING_PH:
-      for (h = 0; h <= 50; h++) {
+      for (h = 0; h <= 25; h++) {
         relay(1, 0, 0);                                   
         
         static unsigned long timepoint = millis();
@@ -225,7 +222,7 @@ void loop() {
           }
           averagePH = totalPH / NUM_READINGS;             // Menghitung rata-rata
           phValue = ph.readPH(averagePH, temperatureds);  // Konversi tegangan rata-rata ke pH dengan kompensasi suhu
-          waktuku();
+          // waktuku();
           displayLcd();
         }
         delay(1000);
@@ -239,7 +236,7 @@ void loop() {
 
     case SAMPLING_EC:
       lcd.clear();
-      for (h = 0; h <= 50; h++) {
+      for (h = 0; h <= 30; h++) {
         relay(0, 1, 0);
         
         static unsigned long timepoint = millis();
@@ -259,7 +256,7 @@ void loop() {
           averageEC = totalEC / NUM_READINGS;             // Menghitung rata-rata
           ecValue = ec.readEC(averageEC, temperatureds);  // Konversi tegangan rata-rata ke pH dengan kompensasi suhu
           tds_val = ecValue * 538;
-          waktuku();
+          // waktuku();
           displayLcd();
         }
         delay(1000);
@@ -275,6 +272,7 @@ void loop() {
 
     case KIRIM_DATA:
       lcd.clear();
+      lcd.noDisplay();
       kirim_data();       // Kirim data ke esp8266
       relay(1, 1, 1);     // Matikan semua relay
       minutes = 0;        // Reset nilai menit ke 0
@@ -322,7 +320,6 @@ void jarak() {
         distance = (data_buffer[1] << 8) + data_buffer[2];
         int distancecm = distance / 10;
         tinggi2 = tinggi - distancecm;
-        
       }
     }
   }
