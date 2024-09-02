@@ -192,7 +192,7 @@ void loop() {
     break;
 
     case SAMPLING_SUHU:
-      for (h=1; h <= 20; h++){
+      for (h=1; h <= 5; h++){
         waktuku();
         jarak();
         displayLcd();
@@ -234,6 +234,7 @@ void loop() {
         readingsPH[thisReading] = 0;
       }
       totalPH = 0; readIndexPH = 0;
+      currentState = SAMPLING_EC;
     break;
 
     case SAMPLING_EC:
@@ -269,6 +270,7 @@ void loop() {
         tds_val2 = tds_val+0.5;
 
       }
+      currentState = KIRIM_DATA;
     break;
 
     case KIRIM_DATA:
@@ -276,6 +278,7 @@ void loop() {
       kirim_data();       // Kirim data ke esp8266
       relay(1, 1, 1);     // Matikan semua relay
       minutes = 0;        // Reset nilai menit ke 0
+      currentState = IDLE;
     break;
   }
 }
