@@ -150,7 +150,6 @@ void setup() {
       Serial.println("RTC is the same as compile time! (not expected but all is fine)");
     }
   
-
   Rtc.Enable32kHzPin(false);
   Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
   delay(250);
@@ -174,7 +173,6 @@ void setup() {
 void loop() {
    switch (currentState) {
     case IDLE:
-      lcd.display();
       waktuku();
       displayLcd();
       
