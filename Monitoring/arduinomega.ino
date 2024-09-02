@@ -271,8 +271,7 @@ void loop() {
     break;
 
     case KIRIM_DATA:
-      lcd.clear();
-      lcd.noDisplay();
+      resetLCD();
       kirim_data();       // Kirim data ke esp8266
       relay(1, 1, 1);     // Matikan semua relay
       minutes = 0;        // Reset nilai menit ke 0
@@ -335,6 +334,13 @@ void kirim_data() {
   kirim += level_air;       kirim += "$";
   Serial3.print(kirim);
   Serial.print(kirim);
+}
+
+void resetLCD(){
+  lcd.clear();
+  lcd.display();
+  lcd.init();
+  lcd.backlight();
 }
 
 void homeDisplay() {
