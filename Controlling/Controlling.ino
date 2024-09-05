@@ -7,11 +7,9 @@
 #include "esp_task_wdt.h"
 #include "time.h"
 #include "Wire.h"
-
-#include <WiFiClientSecure.h>
-#include <UniversalTelegramBot.h>
-
 #include <LiquidCrystal_I2C.h>
+#include "WeatherClient.h"
+#include "ControllingClient.h"
 
 LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 16 chars and 2 line display
 
@@ -28,8 +26,11 @@ const char* password = "WWW.omahiot.NET";
 const char* serverUrlWeather = "https://hydroponic.omahiot.com/api/getNutrientWeather/3";
 const char* serverUrlControlling = "https://hydroponic.omahiot.com/api/getControlling?gh_id=3";
 
-float suhu_max = 38.00, ph_max, tds_max, jsn_max = 38.00, temperature, humidity, light, ph, tds, level_nutrient, suhu_air;
-String gh_id, node, server_time, accumulatedSensorData, time_str, waktu_ntp;
+ControllingClient controllingClient(serverUrlControlling);
+WeatherClient weatherClient(serverUrlWeather);
+
+float ph_max, tds_max, tandon_max, suhu_max, temperature, humidity, light, ph, tds, tandon, suhu_air;
+String waktu;
 
 unsigned long lastTime = 0;
 unsigned long timerDelay = 800000;
@@ -159,83 +160,30 @@ void connectToWiFi() {
 }
 
 void getDataFromWeatherAPI() {
-  HTTPClient http;
-  http.begin(serverUrlWeather);
-  int httpCode = http.GET();
-
-  if (httpCode > 0) {
-    String payload = http.getString();
-    Serial.println("Weather Response: " + payload);
-
-    DynamicJsonDocument doc(2048); // Increase capacity
-    DeserializationError error = deserializeJson(doc, payload);
-
-    if (!error) {
-      server_time = doc["weather"]["server_time"].as<String>();
-      node = doc["weather"]["node"].as<String>();
-      temperature = doc["weather"]["temperature"].as<float>();
-      humidity = doc["weather"]["humidity"].as<float>();
-      light = doc["weather"]["light"].as<float>();
-      gh_id = doc["weather"]["gh_id"].as<String>();
-      ph = doc["nutrient"]["ph"].as<float>();
-      tds = doc["nutrient"]["tds"].as<float>();
-      level_nutrient = doc["nutrient"]["level_nutrient"].as<float>();
-      suhu_air = doc["nutrient"]["temperature"].as<float>();
-      
-      int spaceIndex = server_time.indexOf(' ');
-      time_str = server_time.substring(spaceIndex + 1);
-      
-      Serial.println("Weather Data:");
-      Serial.print("Server Time: "); Serial.println(server_time);
-      Serial.print("Server Time: "); Serial.println(time_str);
-      Serial.print("GH ID: "); Serial.println(gh_id);
-      Serial.print("Node: "); Serial.println(node);
-      Serial.print("Temperature: "); Serial.println(temperature);
-      Serial.print("Humidity: "); Serial.println(humidity);
-      Serial.print("Light: "); Serial.println(light);
-      Serial.print("PPm: "); Serial.println(tds);
-      Serial.print("Nutrient Level: "); Serial.println(level_nutrient);
-      Serial.println();
-    } else {
-      Serial.print("deserializeJson() failed: ");
-      Serial.println(error.c_str());
-    }
+  if (weatherClient.fetchData()) {
+    Serial.println("Data fetched successfully!");
+    waktu = weatherClient.getServerTime();
+    temperature = weatherClient.getTemperature();
+    humidity = weatherClient.getHumidity();
+    light = weatherClient.getLight();
+    ph = weatherClient.getPH();
+    tds = weatherClient.getTDS();
+    tandon = weatherClient.getNutrientLevel();
+    suhu_air = weatherClient.getWaterTemperature();
   } else {
-    Serial.print("Error on Weather HTTP request: ");
-    Serial.println(httpCode);
+    Serial.println("Failed to fetch data.");
   }
-  http.end();
 }
 
 void getDataFromControllingAPI() {
-  HTTPClient http;
-  http.begin(serverUrlControlling);
-  int httpCode = http.GET();
-
-  if (httpCode > 0) {
-    String payload = http.getString();
-    Serial.println("Controlling Response: " + payload);
-
-    DynamicJsonDocument doc(1024);
-    DeserializationError error = deserializeJson(doc, payload);
-    if (!error) {
-      suhu_max = doc["suhu_max"].as<float>();
-      ph_max = doc["ph_max"].as<float>();
-      tds_max = doc["tds_max"].as<float>();
-
-      // Serial.println("Controlling Data:");
-      // Serial.print("Suhu max: "); Serial.println(suhu_max);
-      // Serial.print("Ph max: "); Serial.println(ph_max);
-      // Serial.print("TDS max: "); Serial.println(tds_max);
-    } else {
-      Serial.print("deserializeJson() failed: ");
-      Serial.println(error.c_str());
-    }
+  if (controllingClient.fetchData()) {
+    Serial.println("Data fetched successfully!");
+    suhu_max = controllingClient.getSuhuMax();
+    ph_max = controllingClient.getPhMax();
+    tds_max = controllingClient.getTdsMax();
   } else {
-    Serial.print("Error on Controlling HTTP request: ");
-    Serial.println(httpCode);
+    Serial.println("Failed to fetch data.");
   }
-  http.end();
 }
 
 void blower(){
@@ -291,9 +239,9 @@ void controllingPH() {
   timeString = String(timeStringBuff);
 
   // masuk program controlling ph
-  float intervalConPH = (((ph - ph_max) - 0.1887 + (0.0038 * jsn_max)) / 0.122) * 1000;
+  float intervalConPH = ((0.0440610566908398 * tandon) + (10.4878257572978 * (ph - ph_max))  -2.25033477638771) * 1000;
   if (ph > ph_max) {
-    lcd.setCursor(0,0);     lcd.print("POMPA PH");      lcd.setCursor(10, 0);  lcd.print(": "); lcd.print("NYALA ");
+    lcd.setCursor(0,0);         lcd.print("POMPA PH");      lcd.setCursor(10, 0);  lcd.print(": "); lcd.print("NYALA ");
     Serial.print(timeString);   Serial.print("  -->  ");  Serial.print("Controlling ph nyala dengan nilai ph sekarang ");  Serial.print(ph);  Serial.print(" dengan interval "); Serial.print(intervalConPH);   Serial.println(" ms.");
     logFile.print(timeString);   logFile.print("  -->  ");  logFile.print("Controlling ph nyala dengan nilai ph sekarang ");  logFile.print(ph);  logFile.print(" dengan interval "); logFile.print(intervalConPH);   logFile.println(" ms.");
     digitalWrite(relayPh, HIGH);
@@ -357,7 +305,7 @@ void controllingTDSA() {
   timeString = String(timeStringBuff);
 
   // masuk ke program utama controlling nutrisi a
-  float intervalConTDSA = ((((tds_max - tds) / 2) - 14.148 + (0.22564 * jsn_max)) / 3.312) * 1000;
+  float intervalConTDSA = (((0.350314869129155 * tandon) + (0.257992452699358 * (tds_max - tds)) - 20.3384994785302) * 0.7) * 1000;
   if (tds < tds_max) {
     pompanuta = "NYALA ";
     lcd.setCursor(0,1);     lcd.print("POMPA NUTA");   lcd.setCursor(10, 1);  lcd.print(": "); lcd.print(pompanuta);
@@ -424,7 +372,7 @@ void controllingTDSB() {
   timeString = String(timeStringBuff);
 
   // masuk ke program utama controlling nut b
-  float intervalConTDSB = ((((tds_max - tds) / 2) - 9.019 + (0.1414 * jsn_max)) / 1.781) * 1000;
+  float intervalConTDSB = (((0.398119334838059 * tandon) + (0.525005800525129 * (tds_max - tds)) - 19.5362441144985) * 0.3) * 1000;
   if (tds < tds_max) {
     pompanutb = "NYALA ";
     lcd.setCursor(0,2);     lcd.print("POMPA NUTB");   lcd.setCursor(10, 2);  lcd.print(": "); lcd.print(pompanutb);
