@@ -188,11 +188,11 @@ void loop() {
         lastTime = millis();
       }
 
-      if (minutes == 10) {currentState = SAMPLING_SUHU;}
+      if (minutes == 1) {currentState = SAMPLING_SUHU;}
     break;
 
     case SAMPLING_SUHU:
-      for (h=1; h <= 5; h++){
+      for (h=1; h <= 10; h++){
         // waktuku();
         wdt_reset();
         jarak();
@@ -233,7 +233,7 @@ void loop() {
       }
       totalPH = 0; readIndexPH = 0;
       currentState = SAMPLING_EC;
-      phbaru = phValue * 1.33;
+      phbaru = phValue / 1.33;
     break;
 
     case SAMPLING_EC:
@@ -253,7 +253,7 @@ void loop() {
         }
         averageEC = totalEC / NUM_READINGS;             // Menghitung rata-rata
         ecValue = ec.readEC(averageEC, temperatureds);  // Konversi tegangan rata-rata ke pH dengan kompensasi suhu
-        tds_val = ecValue * 643;
+        tds_val = ecValue * 720;
         // waktuku();
         displayLcd();
         delay(1000);
