@@ -51,7 +51,7 @@ void loop()
       Serial.print("^C  EC:");
       Serial.print(ecValue,2);
       Serial.print("ms/cm");
-      int tds = ecValue*538;
+      int tds = ecValue*643;
       Serial.print("    Nilai TDS: ");
       Serial.println(tds);
     }
