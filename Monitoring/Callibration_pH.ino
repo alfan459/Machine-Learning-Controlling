@@ -48,7 +48,11 @@ void loop()
         Serial.print("temperature:");
         Serial.print(temperature,1);
         Serial.print("^C  pH:");
-        Serial.println(phValue,2);
+        Serial.print(phValue,2);
+        float phbaru = phValue / 1.33;
+        Serial.print("  Data baru: ");
+        Serial.println(phbaru);
+
     }
     ph.calibration(voltage,temperature);           // calibration process by Serail CMD
 }
