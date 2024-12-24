@@ -1,12 +1,12 @@
 # include "time.h"
 
-const char* ntpServer = "pool.ntp.org"
+const char* ntpServer = "pool.ntp.org";
 const long gmtOffset_sec = 7*3600;
 const int daylightOffset_sec = 0;
 
 void setup(){
 	Serial.begin(9600);
-
+	
 	// inisialisasi waktu
 	configTime(gmtOffset, daylightOffset, ntpServer);
 	printLocalTime();
